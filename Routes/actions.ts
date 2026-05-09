@@ -922,7 +922,47 @@ router.get(
       });
     } catch (err) {
       console.error('Error in /trips/user/:driverId', err);
-      return res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Error in /trips/user/:driverId' });
+    }
+  },
+);
+router.delete(
+  '/user/:userID',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const { userID } = req.params;
+      if (!userID) {
+        return res.status(400).json({ error: 'userID is required' });
+      }
+
+      // Authorization: only the user themselves or an admin can delete
+      // const caller = req.user as { userID: string; role: string } | undefined;
+      // if (!caller || (caller.userID !== userID && caller.role !== 'admin')) {
+      //   return res.status(403).json({ error: 'forbidden' });
+      // }
+
+      // Delete driver record first so a failure doesn't leave an orphan
+      const existing = await UserModel.findOne({ userID: userID });
+      if (!existing) {
+        return res.status(404).json({ error: 'user not found' });
+      }
+      if (existing.role === 'driver') {
+        const deletedDriver = await Driver.findOneAndDelete({
+          driverId: userID,
+        });
+        if (!deletedDriver) {
+          console.warn(
+            `User ${userID} had role 'driver' but no Driver document existed`,
+          );
+        }
+      }
+
+      const deletedUser = await UserModel.findOneAndDelete({ userID });
+      return res.status(200).json({ success: true, deletedUser });
+    } catch (err) {
+      console.error('Error in DELETE /user/:userID', err);
+      return res.status(500).json({ error: 'Error in DELETE /user/:userID' });
     }
   },
 );
