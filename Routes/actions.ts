@@ -432,7 +432,7 @@ router.post(
     }
   },
 );
-router.post(
+router.get(
   '/trips/all',
   optionalAuthenticateJWT(passport),
   async (req: Request, res: Response) => {
