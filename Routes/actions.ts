@@ -432,6 +432,26 @@ router.post(
     }
   },
 );
+router.post(
+  '/trips/all',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const trips = await Trip.find({
+        status: { $in: ['requested', 'negotiating'] },
+      });
+
+      return res.json({
+        success: true,
+        count: trips.length,
+        trips,
+      });
+    } catch (err) {
+      console.error('Error in /trips/all', err);
+      return res.status(500).json({ error: 'Error in /trips/all' });
+    }
+  },
+);
 
 /**
  * 6) Trip completed (roomName aligned)
