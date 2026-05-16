@@ -21,6 +21,8 @@ import {
 } from '../../lib/storage';
 import path from 'path';
 import { Driver } from '../../models/DriverModel';
+import LicenseModel from '../../models/licensesModel';
+import CarModel from '../../models/carModel';
 
 export const allDrivers = asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -60,6 +62,9 @@ export const allDrivers = asyncHandler(async (req: Request, res: Response) => {
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
+    console.log('userId', userId);
+    let licenses = [];
+    let cars = [];
     if (!userId) {
       res.status(404).json({ message: 'UserID Is required' });
       return;
@@ -68,6 +73,12 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;
+    }
+    if (user.role == 'driver') {
+      const license = await LicenseModel.findOne({ userId: userId });
+      console.log(license);
+      const car = await CarModel.findOne({ userId: userId });
+      console.log(car);
     }
     res.status(200).json(user);
   } catch (error) {

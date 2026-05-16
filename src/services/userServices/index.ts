@@ -20,6 +20,8 @@ import {
   fileExists,
 } from '../../lib/storage';
 import path from 'path';
+import LicenseModel from '../../models/licensesModel';
+import CarModel from '../../models/carModel';
 
 export const createUser = asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -163,23 +165,55 @@ export const getMeData = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to fetch user', error });
   }
 });
+// export const getUserById = asyncHandler(async (req: Request, res: Response) => {
+//   try {
+//     const userId = req.params.id;
+//     const user = await UserModel.findOne({ userID: userId }).populate({
+//       path: 'followed',
+//       populate: { path: 'brands' },
+//     });
+//     if (!user) {
+//       res.status(404).json({ message: 'User not found' });
+//       return;
+//     }
+//     res.status(200).json(user);
+//   } catch (error) {
+//     console.error('Error fetching user by ID:', error);
+//     res.status(500).json({ message: 'Failed to fetch user', error });
+//   }
+// });
+
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = req.params.id;
-    const user = await UserModel.findOne({ userID: userId }).populate({
-      path: 'followed',
-      populate: { path: 'brands' },
-    });
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    console.error('Error fetching user by ID:', error);
-    res.status(500).json({ message: 'Failed to fetch user', error });
+  const userId = req.params.id;
+
+  if (!userId) {
+    res.status(400).json({ message: 'UserID is required' });
+    return;
   }
+
+  const user = await UserModel.findOne({ userID: userId });
+
+  if (!user) {
+    res.status(404).json({ message: 'User not found' });
+    return;
+  }
+
+  let licenses: any[] = [];
+  let cars: any[] = [];
+
+  if (user.role === 'driver') {
+    const [licenseResults, carResult] = await Promise.all([
+      LicenseModel.find({ userId }),
+      CarModel.find({ userId }),
+    ]);
+
+    licenses = licenseResults; // already an array
+    cars = [carResult]; // wrap single doc if found
+  }
+
+  res.status(200).json({ user, licenses, cars });
 });
+
 export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
