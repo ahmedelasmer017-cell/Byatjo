@@ -207,8 +207,8 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
       CarModel.find({ userId }),
     ]);
 
-    licenses = licenseResults; // already an array
-    cars = [carResult]; // wrap single doc if found
+    licenses = licenseResults;
+    cars = carResult;
   }
 
   res.status(200).json({ user, licenses, cars });
