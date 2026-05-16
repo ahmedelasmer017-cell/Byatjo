@@ -380,7 +380,7 @@ export const registerDriverHandler = async (req: Request, res: Response) => {
         licenseNumber: driver.license.licenseNumber || '',
         licensePhotoURL: driver.licensePhotoURL || [],
         carID: newCar._id || [],
-        degree: driver.degree || undefined,
+        degree: driver.license?.degree || undefined,
         userId: UserID,
       } as ILicenses;
 
@@ -991,9 +991,9 @@ export const logoutHandler = async (req: Request, res: Response) => {
     // Step 2: Passport logout (must be done before session destruction)
     const canUseSessionLogout = Boolean(
       req.session &&
-        typeof (req as any).logout === 'function' &&
-        typeof (req as any).isAuthenticated === 'function' &&
-        (req as any).isAuthenticated(),
+      typeof (req as any).logout === 'function' &&
+      typeof (req as any).isAuthenticated === 'function' &&
+      (req as any).isAuthenticated(),
     );
     if (canUseSessionLogout) {
       await new Promise<void>((resolve) => {
