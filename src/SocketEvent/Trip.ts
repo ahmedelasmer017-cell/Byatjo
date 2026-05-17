@@ -576,10 +576,10 @@ export default (io: Server, socket: Socket) => {
     try {
       const { tripId, driverId, riderId } = data || {};
 
-      if (!tripId || !driverId || !riderId) {
+      if (!tripId || !riderId) {
         cb?.({
           success: false,
-          error: 'tripId, driverId, riderId  are required',
+          error: 'tripId, riderId  are required',
         });
         return;
       }
@@ -594,11 +594,12 @@ export default (io: Server, socket: Socket) => {
         cb?.({ success: false, error: 'Rider not found' });
         return;
       }
-
-      const driver = await Driver.findOne({ driverId });
-      if (!driver) {
-        cb?.({ success: false, error: 'Driver not found' });
-        return;
+      if (driverId) {
+        const driver = await Driver.findOne({ driverId });
+        if (!driver) {
+          cb?.({ success: false, error: 'Driver not found' });
+          return;
+        }
       }
 
       const trip = await Trip.findById(tripId);
