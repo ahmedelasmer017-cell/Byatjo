@@ -457,6 +457,7 @@ router.delete(
   optionalAuthenticateJWT(passport),
   async (req: Request, res: Response) => {
     try {
+      // fix id
       const id = req.params.id as string;
       if (!id) {
         return res
