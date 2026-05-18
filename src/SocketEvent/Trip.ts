@@ -629,7 +629,12 @@ export default (io: Server, socket: Socket) => {
       await trip.save();
       const roomName = tripRoom(tripId);
       socket.join(roomName); // ensure driver joins
-
+      io.to('drivers:online').emit('trip:cancelled', {
+        tripId,
+        driverId,
+        riderId,
+        status: trip.status,
+      });
       io.to(roomName).emit('trip:cancelled', {
         tripId,
         driverId,
