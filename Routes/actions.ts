@@ -452,6 +452,39 @@ router.get(
     }
   },
 );
+router.delete(
+  '/trips/delete/:id',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res
+          .status(400)
+          .json({ success: false, error: 'trip Id is required' });
+      }
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: 'Invalid tripId format' });
+      }
+      const trip = await Trip.findByIdAndDelete(id);
+      if (!trip) {
+        return res
+          .status(400)
+          .json({ success: false, error: 'tripId not found' });
+      }
+
+      return res.json({
+        success: true,
+        trip,
+      });
+    } catch (err) {
+      console.error('Error in /trips/delete/:id', err);
+      return res
+        .status(500)
+        .json({ success: false, error: 'Error in /trips/delete/:id' });
+    }
+  },
+);
 
 /**
  * 6) Trip completed (roomName aligned)
