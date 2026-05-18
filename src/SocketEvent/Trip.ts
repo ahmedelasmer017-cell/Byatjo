@@ -521,7 +521,17 @@ export default (io: Server, socket: Socket) => {
         logger.error(err);
         return;
       }
-
+      const notAllow = await Trip.findOne({
+        driverId: driverId,
+        status: 'accepted',
+      });
+      if (notAllow) {
+        cb?.({
+          success: false,
+          error: `هذا السائق غير متاح حاليا`,
+        });
+        return;
+      }
       if (!['requested', 'negotiating'].includes(trip.status)) {
         const err = 'Trip cannot be accepted in current status';
         cb?.({
@@ -1732,6 +1742,24 @@ export default (io: Server, socket: Socket) => {
         //   });
         //   return;
         // }
+        const notAllow = await Trip.findOne({
+          driverId: offer.driverId,
+          status: {
+            $in: [
+              'accepted',
+              'driver_on_the_way',
+              'on_route',
+              'driver_arrived',
+            ],
+          },
+        });
+        if (notAllow) {
+          cb?.({
+            success: false,
+            error: `هذا السائق غير متاح حاليا`,
+          });
+          return;
+        }
 
         // ── mark offer accepted ──
         offer.status = 'accepted';
@@ -1767,7 +1795,7 @@ export default (io: Server, socket: Socket) => {
         cb?.({ success: true, offer, trip: updatedTrip });
       } catch (err) {
         console.error('Error in offer:accept', err);
-        cb?.({ success: false, error: 'Internal server error' });
+        cb?.({ success: false, error: 'Error in offer:accept' });
       }
     },
   );
