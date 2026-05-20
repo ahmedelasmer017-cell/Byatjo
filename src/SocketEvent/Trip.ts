@@ -1558,25 +1558,25 @@ export default (io: Server, socket: Socket) => {
           status: { $ne: 'cancelled' },
         });
 
-        if (role === 'driver' && existingCount >= maxNegotiations) {
-          const error = 'Maximum number of negotiations reached';
-          cb?.({
-            success: false,
-            error,
-            negotiationCount: existingCount,
-            maxNegotiations,
-          });
-          io.to(roomName).emit('offer:update', {
-            success: false,
-            error,
-            tripId,
-            driverId,
-            riderId,
-            negotiationCount: existingCount,
-            maxNegotiations,
-          });
-          return;
-        }
+        // if (role === 'driver' && existingCount >= maxNegotiations) {
+        //   const error = 'Maximum number of negotiations reached';
+        //   cb?.({
+        //     success: false,
+        //     error,
+        //     negotiationCount: existingCount,
+        //     maxNegotiations,
+        //   });
+        //   io.to(roomName).emit('offer:update', {
+        //     success: false,
+        //     error,
+        //     tripId,
+        //     driverId,
+        //     riderId,
+        //     negotiationCount: existingCount,
+        //     maxNegotiations,
+        //   });
+        //   return;
+        // }
 
         // ── create offer ──
         const offer = await OfferModel.create({
