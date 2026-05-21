@@ -517,7 +517,7 @@ export default (io: Server, socket: Socket) => {
       const trip = await Trip.findById(tripId);
       if (!trip) {
         const err = 'Trip not found';
-        cb?.({ success: false, err });
+        cb?.({ success: false, err, trip });
         logger.error(err);
         return;
       }
@@ -529,6 +529,7 @@ export default (io: Server, socket: Socket) => {
         cb?.({
           success: false,
           error: `هذا السائق غير متاح حاليا`,
+          trip,
         });
         return;
       }
@@ -537,6 +538,7 @@ export default (io: Server, socket: Socket) => {
         cb?.({
           success: false,
           err,
+          trip,
         });
         logger.error(err);
         return;
@@ -740,7 +742,19 @@ export default (io: Server, socket: Socket) => {
       );
 
       if (!trip) {
-        cb?.({ success: false, error: 'Trip not found' });
+        cb?.({ success: false, error: 'Trip not found', trip });
+        return;
+      }
+      if (trip.status == 'negotiating' || trip.status == 'requested') {
+        cb?.({ success: false, error: 'هذه الرحله لم تبدا بعد', trip });
+        return;
+      }
+      if (trip.status == 'cancelled') {
+        cb?.({
+          success: false,
+          error: 'هذه الرحله تم الغائها من قبل العميل',
+          trip,
+        });
         return;
       }
 
@@ -1757,6 +1771,21 @@ export default (io: Server, socket: Socket) => {
           cb?.({
             success: false,
             error: `هذا السائق غير متاح حاليا`,
+            offer,
+          });
+          return;
+        }
+        const trip = await Trip.findById(offer.tripId);
+
+        if (!trip) {
+          cb?.({ success: false, error: 'Trip not found', trip });
+          return;
+        }
+        if (trip.status == 'cancelled') {
+          cb?.({
+            success: false,
+            error: 'هذه الرحله تم الغائها من قبل العميل',
+            trip,
           });
           return;
         }
