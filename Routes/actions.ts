@@ -934,7 +934,7 @@ router.get(
  * Returns: Paginated list of all trips for a specific user
  */
 router.get(
-  '/trips/driver/:driverId',
+  '/trips/driver/nopage/:driverId',
   optionalAuthenticateJWT(passport),
   async (req: Request, res: Response) => {
     try {
@@ -946,33 +946,33 @@ router.get(
       // }
 
       // Extract pagination parameters from query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const skip = (page - 1) * limit;
+      // const page = parseInt(req.query.page as string) || 1;
+      // const limit = parseInt(req.query.limit as string) || 20;
+      // const skip = (page - 1) * limit;
 
-      if (page < 1 || limit < 1) {
-        return res
-          .status(400)
-          .json({ error: 'page and limit must be positive integers' });
-      }
+      // if (page < 1 || limit < 1) {
+      //   return res
+      //     .status(400)
+      //     .json({ error: 'page and limit must be positive integers' });
+      // }
 
       // Count total trips for this user
       const totalTrips = await Trip.countDocuments({ driverId });
 
       // Fetch paginated trips for this user
       const trips = await Trip.find({ driverId })
-        .skip(skip)
-        .limit(limit)
+        // .skip(skip)
+        // .limit(limit)
         .sort({ tripTime: -1 }); // Most recent first
 
       return res.status(200).json({
         success: true,
         data: trips,
         total: totalTrips,
-        page,
-        limit,
-        totalPages: Math.ceil(totalTrips / limit),
-        hasMore: page * limit < totalTrips,
+        // page,
+        // limit,
+        // totalPages: Math.ceil(totalTrips / limit),
+        // hasMore: page * limit < totalTrips,
       });
     } catch (err) {
       console.error('Error in /trips/user/:driverId', err);
