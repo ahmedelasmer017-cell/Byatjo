@@ -219,7 +219,11 @@ router.post(
       const io = getIO(req);
 
       const startingFare = typeof initialFare === 'number' ? initialFare : 0;
-
+      if (isScheduled && tripTime == 0) {
+        return res
+          .status(404)
+          .json({ error: 'when trip isScheduled ,its tripTime is required ' });
+      }
       const trip = await Trip.create({
         riderId,
         pickup,
@@ -496,6 +500,48 @@ router.get(
     } catch (err) {
       console.error('Error in /trips/all', err);
       return res.status(500).json({ error: 'Error in /trips/all' });
+    }
+  },
+);
+router.get(
+  '/alltripstoday',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const startOfTomorrow = new Date(startOfToday);
+      startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+      const startTimestamp = startOfToday.getTime();
+      const endTimestamp = startOfTomorrow.getTime();
+      const trips = await Trip.find({
+        $or: [
+          {
+            isScheduled: false,
+            createdAt: {
+              $gte: startOfToday,
+              $lt: startOfTomorrow,
+            },
+          },
+          {
+            isScheduled: true,
+            tripTime: {
+              $gte: startTimestamp,
+              $lt: endTimestamp,
+            },
+          },
+        ],
+      }).sort({ createdAt: -1 });
+
+      return res.json({
+        success: true,
+        count: trips.length,
+        trips,
+      });
+    } catch (err) {
+      console.error('Error in /alltripstoday', err);
+      return res.status(500).json({ error: 'Error in /alltripstoday' });
     }
   },
 );

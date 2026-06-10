@@ -32,7 +32,7 @@ export const allDrivers = asyncHandler(async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     // Get total count for pagination metadata
-    const totalDrivers = await Driver.countDocuments({});
+    const totalDrivers = await Driver.countDocuments({ online: true });
 
     // Fetch paginated users
     const users = await Driver.find({ online: true })
