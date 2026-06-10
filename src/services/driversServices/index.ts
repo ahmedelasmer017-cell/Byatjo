@@ -59,6 +59,33 @@ export const allDrivers = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to fetch users', error });
   }
 });
+export const allDriversOnOff = asyncHandler(
+  async (req: Request, res: Response) => {
+    try {
+      // Extract pagination parameters from query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const skip = (page - 1) * limit;
+
+      // Get total count for pagination metadata
+      const totalDrivers = await Driver.countDocuments({});
+
+      // Fetch paginated users
+      const users = await Driver.find().sort({ createdAt: -1 }); // Most recent first
+
+      // Return paginated response
+      res.status(200).json({
+        data: users,
+        total: totalDrivers,
+      });
+    } catch (error) {
+      console.error('Error fetching all allDriversOnOff:', error);
+      res
+        .status(500)
+        .json({ message: 'Failed to fetch allDriversOnOff', error });
+    }
+  },
+);
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
@@ -86,6 +113,118 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to fetch user', error });
   }
 });
+export const updateUserActive = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.params.id;
+    console.log('userId', userId);
+    if (!userId) {
+      res.status(400).json({ message: 'UserID is required' });
+      return;
+    }
+
+    const {
+      active,
+      isVerified,
+      emailVerified,
+    }: {
+      active?: boolean;
+      isVerified?: boolean;
+      emailVerified?: boolean;
+    } = req.body;
+
+    const updateData: Record<string, boolean> = {};
+
+    if (active !== undefined) {
+      if (typeof active !== 'boolean') {
+        res.status(400).json({ message: 'active must be boolean' });
+        return;
+      }
+
+      updateData.active = active;
+    }
+
+    if (isVerified !== undefined) {
+      if (typeof isVerified !== 'boolean') {
+        res.status(400).json({ message: 'isVerified must be boolean' });
+        return;
+      }
+
+      updateData.isVerified = isVerified;
+    }
+
+    if (emailVerified !== undefined) {
+      if (typeof emailVerified !== 'boolean') {
+        res.status(400).json({ message: 'emailVerified must be boolean' });
+        return;
+      }
+
+      updateData['contactInfo.email.verified'] = emailVerified;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({
+        message:
+          'At least one field is required: active, isVerified, emailVerified',
+      });
+      return;
+    }
+
+    const user = await UserModel.findOneAndUpdate(
+      { userID: userId },
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'User updated successfully',
+      user,
+    });
+  },
+);
+export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    let licenses = [];
+    let cars = [];
+
+    const drivers = await UserModel.find({ role: 'user' });
+    if (!drivers) {
+      res.status(404).json({ message: 'drivers not found' });
+      return;
+    }
+
+    res.status(200).json(drivers);
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+    res.status(500).json({ message: 'Failed to fetch drivers', error });
+  }
+});
+export const getAlldrivers = asyncHandler(
+  async (req: Request, res: Response) => {
+    try {
+      let licenses = [];
+      let cars = [];
+
+      const drivers = await UserModel.find({ role: 'driver' });
+      if (!drivers) {
+        res.status(404).json({ message: 'drivers not found' });
+        return;
+      }
+
+      res.status(200).json(drivers);
+    } catch (error) {
+      console.error('Error fetching user by ID:', error);
+      res.status(500).json({ message: 'Failed to fetch drivers', error });
+    }
+  },
+);
 export const AllNearstDriver = asyncHandler(
   async (req: Request, res: Response) => {
     try {

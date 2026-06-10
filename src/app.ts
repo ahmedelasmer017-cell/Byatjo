@@ -516,6 +516,7 @@ app.get('/sitemap.xml', async (req, res) => {
 
 // API routes
 app.use('/auth', AuthAPI);
+app.use('/api/auth', AuthAPI);
 app.use('/api', api);
 app.use('/api', actionsRouter);
 app.use('/api', DriversRouter);

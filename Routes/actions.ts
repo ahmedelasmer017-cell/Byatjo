@@ -452,6 +452,53 @@ router.get(
     }
   },
 );
+router.get(
+  '/alltrips',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+      const limit = Math.max(parseInt(req.query.limit as string) || 10, 1);
+      const skip = (page - 1) * limit;
+
+      // Build a dynamic filter object
+      const filter: Record<string, any> = {};
+
+      if (req.query.status) {
+        filter.status = req.query.status;
+      }
+
+      if (req.query.search) {
+        const q = new RegExp(req.query.search as string, 'i');
+        filter.$or = [
+          { 'pickup.address': q },
+          { 'dropoff.address': q },
+          { loadDescription: q },
+          { riderId: q },
+          { driverId: q },
+        ];
+      }
+
+      const [trips, totalTrips] = await Promise.all([
+        Trip.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
+        Trip.countDocuments(filter),
+      ]);
+
+      return res.json({
+        success: true,
+        count: trips.length,
+        totalTrips,
+        totalPages: Math.ceil(totalTrips / limit),
+        currentPage: page,
+        limit,
+        trips,
+      });
+    } catch (err) {
+      console.error('Error in /trips/all', err);
+      return res.status(500).json({ error: 'Error in /trips/all' });
+    }
+  },
+);
 router.delete(
   '/trips/delete/:id',
   optionalAuthenticateJWT(passport),
@@ -849,10 +896,20 @@ router.get(
       }
 
       // Get total count of scheduled trips
-      const totalTrips = await Trip.countDocuments({ isScheduled: true });
+      const totalTrips = await Trip.countDocuments({
+        isScheduled: true,
+        status: {
+          $nin: ['completed', 'cancelled'],
+        },
+      });
 
       // Fetch paginated scheduled trips
-      const trips = await Trip.find({ isScheduled: true })
+      const trips = await Trip.find({
+        isScheduled: true,
+        status: {
+          $nin: ['completed', 'cancelled'],
+        },
+      })
         .skip(skip)
         .limit(limit)
         .sort({ tripTime: -1 }); // Most recent first
@@ -927,12 +984,107 @@ router.get(
     }
   },
 );
+router.get(
+  '/trips/rider/:riderId',
+  // '/trips/rider/nopage/:riderId',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const { riderId } = req.params;
+
+      // Validate userId
+      // if (!mongoose.Types.ObjectId.isValid(riderId)) {
+      //   return res.status(400).json({ error: 'Invalid userId' });
+      // }
+
+      // Extract pagination parameters from query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const skip = (page - 1) * limit;
+
+      if (page < 1 || limit < 1) {
+        return res
+          .status(400)
+          .json({ error: 'page and limit must be positive integers' });
+      }
+
+      // Count total trips for this user
+      const totalTrips = await Trip.countDocuments({ riderId });
+
+      // Fetch paginated trips for this user
+      const trips = await Trip.find({ riderId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ tripTime: -1 }); // Most recent first
+
+      return res.status(200).json({
+        success: true,
+        data: trips,
+        total: totalTrips,
+        page,
+        limit,
+        totalPages: Math.ceil(totalTrips / limit),
+        hasMore: page * limit < totalTrips,
+      });
+    } catch (err) {
+      console.error('Error in /trips/user/:riderId', err);
+      return res.status(500).json({ error: 'Error in /trips/user/:riderId' });
+    }
+  },
+);
 /**
  * 9) Get all trips by driverId
  * GET /api/trips/driver/:driverId
  * Query: ?page=1&limit=20
  * Returns: Paginated list of all trips for a specific user
  */
+router.get(
+  '/trips/driver/:driverId',
+  optionalAuthenticateJWT(passport),
+  async (req: Request, res: Response) => {
+    try {
+      const { driverId } = req.params;
+
+      // Validate driverId
+      // if (!mongoose.Types.ObjectId.isValid(driverId)) {
+      //   return res.status(400).json({ error: 'Invalid driverId' });
+      // }
+
+      // Extract pagination parameters from query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const skip = (page - 1) * limit;
+
+      if (page < 1 || limit < 1) {
+        return res
+          .status(400)
+          .json({ error: 'page and limit must be positive integers' });
+      }
+
+      // Count total trips for this user
+      const totalTrips = await Trip.countDocuments({ driverId });
+
+      // Fetch paginated trips for this user
+      const trips = await Trip.find({ driverId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ tripTime: -1 }); // Most recent first
+
+      return res.status(200).json({
+        success: true,
+        data: trips,
+        total: totalTrips,
+        page,
+        limit,
+        totalPages: Math.ceil(totalTrips / limit),
+        hasMore: page * limit < totalTrips,
+      });
+    } catch (err) {
+      console.error('Error in /trips/user/:driverId', err);
+      return res.status(500).json({ error: 'Error in /trips/user/:driverId' });
+    }
+  },
+);
 router.get(
   '/trips/driver/nopage/:driverId',
   optionalAuthenticateJWT(passport),

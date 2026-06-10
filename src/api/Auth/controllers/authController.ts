@@ -925,6 +925,95 @@ export const loginHandler = (
     },
   )(req, res, next);
 };
+// Login dash
+export const loginDashHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  passportInstance: typeof passport,
+) => {
+  passportInstance.authenticate(
+    'local',
+    { session: true },
+    async (err: any, user: any, info: any) => {
+      if (err)
+        return res.status(500).json({
+          success: false,
+          message: 'Internal server error',
+          error: 'INTERNAL_ERROR',
+        });
+      if (!user)
+        return res.status(401).json({
+          success: false,
+          message: info?.message || 'Invalid email or password',
+          error: 'INVALID_CREDENTIALS',
+        });
+      try {
+        req.logIn(user, { session: true }, async (errLogin) => {
+          if (!['superadmin', 'admin'].includes(user.role)) {
+            return res.status(403).json({
+              success: false,
+              message: 'Not authorized',
+              error: 'LOGIN_ERROR',
+            });
+          }
+          if (errLogin)
+            return res.status(500).json({
+              success: false,
+              message: 'Failed to log in user',
+              error: 'LOGIN_ERROR',
+            });
+
+          // Update lastLogin timestamp
+          try {
+            await UserModel.findByIdAndUpdate(user._id, {
+              lastLogin: new Date(),
+            });
+          } catch (updateErr) {
+            console.error('Failed to update lastLogin:', updateErr);
+            // Don't fail the login if this update fails
+          }
+
+          const accessToken = generateAccessToken({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          });
+          const refreshToken = generateRefreshToken();
+          await storeRefreshToken(user.id, refreshToken);
+          res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+          });
+          return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            data: {
+              user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+              },
+              token: accessToken,
+              accessToken,
+            },
+          });
+        });
+      } catch (error) {
+        console.error('Token generation error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to generate tokens',
+          error: 'TOKEN_ERROR',
+        });
+      }
+    },
+  )(req, res, next);
+};
 
 export const refreshHandler = async (req: Request, res: Response) => {
   try {

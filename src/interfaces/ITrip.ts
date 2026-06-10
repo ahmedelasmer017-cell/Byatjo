@@ -30,6 +30,7 @@ export interface INegotiation {
 export interface ITrip extends Document {
   riderId: string;
   negotiations: INegotiation[];
+  allLocations: ILocation[];
   driverId?: string;
   pickup: ILocation;
   dropoff: ILocation;
@@ -48,5 +49,5 @@ export interface ITrip extends Document {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
-  lastDriverLocation: ILocation;
+  lastDriverLocation?: ILocation;
 }

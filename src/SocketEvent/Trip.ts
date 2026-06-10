@@ -1479,13 +1479,26 @@ export default (io: Server, socket: Socket) => {
         },
         { upsert: true, new: true },
       );
-
+      const location = {
+        lat,
+        lng,
+        updatedAt: new Date(),
+      };
       // optionally attach last driver location to trip
-      await Trip.findByIdAndUpdate(tripId, {
-        $set: {
-          lastDriverLocation: { lat, lng, updatedAt: new Date() },
+      await Trip.findByIdAndUpdate(
+        { _id: tripId, driverId },
+        {
+          $set: {
+            lastDriverLocation: location,
+          },
+          $push: {
+            allLocations: location,
+          },
         },
-      }).catch(() => {});
+        {
+          new: true,
+        },
+      );
 
       logger.info(
         `SOCKET trip location: ${driverId}, trip=${tripId}, ${lat}, ${lng}`,

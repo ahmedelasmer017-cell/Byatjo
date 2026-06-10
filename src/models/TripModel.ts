@@ -1,7 +1,6 @@
 import { Schema, model } from 'mongoose';
 import { ILocation, ITrip } from '../interfaces/ITrip';
 import { TransPortTypeEnum } from '../interfaces/ICar';
-import { timeStamp } from 'console';
 const LocationSchema = new Schema<ILocation>(
   {
     lat: { type: Number, required: true },
@@ -18,9 +17,6 @@ carKind: String?
 transportType:String?
 isScheduled:Boolean?
 tripTime: long?
-
-
-
 */
 
 const TripSchema = new Schema<ITrip>(
@@ -88,6 +84,7 @@ const TripSchema = new Schema<ITrip>(
         TransPortTypeEnum.tools,
       ],
     },
+    allLocations: { type: [LocationSchema], default: [] },
     isScheduled: { type: Boolean, default: false },
     tripTime: { type: Number, default: Date.now },
     completedAt: { type: Date },

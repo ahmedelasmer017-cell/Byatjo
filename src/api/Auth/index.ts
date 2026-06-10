@@ -26,6 +26,7 @@ import {
   meHandler,
   googleCallbackHandler,
   registerDriverHandler,
+  loginDashHandler,
 } from './controllers';
 
 const router = express.Router();
@@ -47,8 +48,11 @@ router.post('/password-reset/request', passwordResetRequestHandler);
 router.post('/password-reset/validate', passwordResetValidateHandler);
 router.post('/password-reset/complete', passwordResetCompleteHandler);
 
-router.post('/login', (req, res, next) =>
-  loginHandler(req, res, next, passport),
+// router.post('/login', (req, res, next) =>
+//   loginHandler(req, res, next, passport),
+// );
+router.post('/login/dash', (req, res, next) =>
+  loginDashHandler(req, res, next, passport),
 );
 router.post('/refresh', refreshHandler);
 router.post('/logout', logoutHandler);
