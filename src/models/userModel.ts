@@ -94,6 +94,11 @@ const userSchema = new Schema<Iuser>(
         message: 'Each sub user ID must be a valid ObjectId',
       },
     },
+    runningTrip: {
+      type: Schema.Types.ObjectId,
+      ref: 'Trip',
+      default: null,
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields automatically

@@ -169,6 +169,15 @@ export default (io: Server, socket: Socket) => {
             socket.emit('trip:join:status', payload);
             return;
           }
+          if (!driver.online) {
+            const payload = {
+              success: false,
+              error: 'driver must be Online',
+            };
+            cb?.(payload);
+            socket.emit('trip:join:status', payload);
+            return;
+          }
 
           if (trip.driverId && trip.driverId !== userId) {
             const payload = {

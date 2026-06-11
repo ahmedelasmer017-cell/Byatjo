@@ -7,7 +7,7 @@ export type TripStatus =
   | 'accepted'
   | 'driver_on_the_way'
   | 'driver_arrived'
-  | 'on_route'
+  | 'running'
   | 'completed'
   | 'cancelled';
 

@@ -35,6 +35,11 @@ const DriverSchema = new Schema<IDriver>(
     lastOnlineAt: { type: Date },
     lastLocation: { type: DriverLocationSchema },
     location: { type: GeoLocationSchema },
+    runningTrip: {
+      type: Schema.Types.ObjectId,
+      ref: 'Trip',
+      default: null,
+    },
   },
   {
     timestamps: true,

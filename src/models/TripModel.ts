@@ -51,7 +51,7 @@ const TripSchema = new Schema<ITrip>(
         'negotiating',
         'driver_on_the_way',
         'driver_arrived',
-        'on_route',
+        'running',
         'completed',
         'cancelled',
       ],

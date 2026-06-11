@@ -523,7 +523,7 @@ export default (io: Server, socket: Socket) => {
       }
       const notAllow = await Trip.findOne({
         driverId: driverId,
-        status: 'accepted',
+        status: { $in: ['accepted', 'running', 'started'] },
       });
       if (notAllow) {
         cb?.({
@@ -558,6 +558,10 @@ export default (io: Server, socket: Socket) => {
         trip.fare = amount;
       }
       await trip.save();
+      // driver.runningTrip = trip.id;
+      // rider.runningTrip = trip.id;
+      // await driver.save();
+      // await rider.save();
       const roomName = tripRoom(tripId);
       socket.join(roomName); // ensure driver joins
 
@@ -575,6 +579,159 @@ export default (io: Server, socket: Socket) => {
         status: trip.status,
         agreedFare: trip.fare,
       });
+      cb?.({ success: true, trip });
+    } catch (err) {
+      console.error('Error in trip:accept', err);
+      cb?.({ success: false, error: 'Internal server error' });
+    }
+  });
+  socket.on('trip:start', async (data, cb?: any) => {
+    try {
+      const { tripId, driverId, riderId, lat, lng } = data || {};
+      const roomName = tripRoom(tripId);
+      socket.join(roomName); // ensure driver joins
+      if (!tripId || !driverId || !riderId || !lat || !lng) {
+        const err = 'tripId, driverId, riderId ,lat and lng are required';
+        cb?.({
+          success: false,
+          err,
+        });
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: null,
+          agreedFare: null,
+          success: false,
+          err,
+        });
+        logger.error(err);
+        return;
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(tripId)) {
+        const err = 'Invalid tripId format';
+        cb?.({ success: false, err });
+        logger.error(err);
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: null,
+          agreedFare: null,
+          success: false,
+          err,
+        });
+        return;
+      }
+
+      const rider = await UserModel.findOne({ userID: riderId });
+      if (!rider) {
+        const err = 'Rider not found';
+        cb?.({ success: false, err });
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: null,
+          agreedFare: null,
+          success: false,
+          err,
+        });
+        logger.error(err);
+        return;
+      }
+
+      const driver = await Driver.findOne({ driverId });
+      if (!driver) {
+        const err = 'Driver not found';
+        cb?.({ success: false, err });
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: null,
+          agreedFare: null,
+          success: false,
+          err,
+        });
+        logger.error(err);
+        return;
+      }
+
+      const trip = await Trip.findById(tripId);
+      if (!trip) {
+        const err = 'Trip not found';
+        cb?.({ success: false, err, trip });
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: null,
+          agreedFare: null,
+          success: false,
+          err,
+        });
+        logger.error(err);
+        return;
+      }
+      const notAllow = await Trip.findOne({
+        driverId: driverId,
+        status: { $in: ['accepted', 'running', 'started'] },
+        _id: { $ne: tripId },
+      });
+      if (notAllow) {
+        const err = {
+          success: false,
+          error: `هذا السائق غير متاح حاليا`,
+          trip,
+        };
+        cb?.(err);
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: trip.status,
+          agreedFare: trip.fare,
+          success: false,
+          err,
+        });
+        return;
+      }
+      if (!['accepted'].includes(trip.status)) {
+        const err = 'Trip cannot be start  in current status';
+
+        cb?.(err);
+        io.to(roomName).emit('trip:started', {
+          tripId,
+          driverId,
+          riderId,
+          status: trip.status,
+          agreedFare: trip.fare,
+          success: false,
+          err,
+        });
+        logger.error(err);
+        return;
+      }
+      const location = {
+        lat,
+        lng,
+        updatedAt: new Date(),
+      };
+      trip.status = 'running';
+      trip.lastDriverLocation = location;
+      trip.allLocations.push(location);
+      driver.runningTrip = trip.id;
+      rider.runningTrip = trip.id;
+      await driver.save();
+      await rider.save();
+      await trip.save();
+
+      io.to(roomName).emit('trip:started', {
+        trip,
+      });
+
       cb?.({ success: true, trip });
     } catch (err) {
       console.error('Error in trip:accept', err);
@@ -607,12 +764,10 @@ export default (io: Server, socket: Socket) => {
         return;
       }
 
-      if (driverId) {
-        const driver = await Driver.findOne({ driverId });
-        if (!driver) {
-          cb?.({ success: false, error: 'Driver not found' });
-          return;
-        }
+      const driver = await Driver.findOne({ driverId });
+      if (!driver) {
+        cb?.({ success: false, error: 'Driver not found' });
+        return;
       }
 
       const trip = await Trip.findById(tripId);
@@ -639,6 +794,10 @@ export default (io: Server, socket: Socket) => {
       trip.status = 'cancelled';
 
       await trip.save();
+      driver.runningTrip = null;
+      rider.runningTrip = null;
+      await driver.save();
+      await rider.save();
       const roomName = tripRoom(tripId);
       socket.join(roomName); // ensure driver joins
       io.to('drivers:online').emit('trip:cancelled', {
@@ -681,7 +840,7 @@ export default (io: Server, socket: Socket) => {
           'accepted',
           'driver_on_the_way',
           'driver_arrived',
-          'on_route',
+          'running',
           'completed',
           'cancelled',
         ];
@@ -757,7 +916,24 @@ export default (io: Server, socket: Socket) => {
         });
         return;
       }
-
+      const rider = await UserModel.findOne({ userID: trip.riderId });
+      if (!rider) {
+        const err = 'Rider not found';
+        cb?.({ success: false, err });
+        logger.error(err);
+        return;
+      }
+      const driver = await Driver.findOne({ driverId: trip.driverId });
+      if (!driver) {
+        const err = 'Driver not found';
+        cb?.({ success: false, err });
+        logger.error(err);
+        return;
+      }
+      rider.runningTrip = null;
+      driver.runningTrip = null;
+      await rider.save();
+      await driver.save();
       const roomName = tripRoom(tripId);
       io.to(roomName).emit('trip:completed', {
         success: true,
@@ -1432,7 +1608,7 @@ export default (io: Server, socket: Socket) => {
         });
         return;
       }
-      const trip = await Trip.findOne({ driverId });
+
       const driver = await Driver.findOne({ driverId });
       if (!driver) {
         const err = 'Driver not found';
@@ -1445,17 +1621,7 @@ export default (io: Server, socket: Socket) => {
         });
         return;
       }
-      if (!trip) {
-        const err = 'trip not found';
-        logger.error(err);
-        io.to(`trip:${tripId}`).emit('trip:location:update', {
-          success: false,
-          err,
-          updatedAt: new Date(),
-        });
-        cb?.({ success: false, error: err });
-        return;
-      }
+
       if (!driver?.online) {
         const err = 'Driver not online';
         logger.error(err);
@@ -1485,7 +1651,7 @@ export default (io: Server, socket: Socket) => {
         updatedAt: new Date(),
       };
       // optionally attach last driver location to trip
-      await Trip.findByIdAndUpdate(
+      const trip = await Trip.findByIdAndUpdate(
         { _id: tripId, driverId },
         {
           $set: {
@@ -1499,13 +1665,23 @@ export default (io: Server, socket: Socket) => {
           new: true,
         },
       );
-
+      if (!trip) {
+        const err = 'trip not found';
+        logger.error(err);
+        io.to(`trip:${tripId}`).emit('trip:location:update', {
+          success: false,
+          err,
+          updatedAt: new Date(),
+        });
+        cb?.({ success: false, error: err });
+        return;
+      }
       logger.info(
         `SOCKET trip location: ${driverId}, trip=${tripId}, ${lat}, ${lng}`,
       );
 
       io.to(`trip:${tripId}`).emit('trip:location:update', {
-        driverId,
+        trip,
         lat,
         lng,
         updatedAt: new Date(),
@@ -1772,12 +1948,7 @@ export default (io: Server, socket: Socket) => {
         const notAllow = await Trip.findOne({
           driverId: offer.driverId,
           status: {
-            $in: [
-              'accepted',
-              'driver_on_the_way',
-              'on_route',
-              'driver_arrived',
-            ],
+            $in: ['accepted', 'driver_on_the_way', 'running', 'driver_arrived'],
           },
         });
         if (notAllow) {

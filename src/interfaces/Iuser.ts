@@ -65,4 +65,5 @@ export default interface Iuser extends Document {
   userInfo?: IUserTInfo;
   createdAt: Date | null;
   licenseID?: Types.ObjectId[];
+  runningTrip?: Types.ObjectId | null;
 }

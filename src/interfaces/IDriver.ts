@@ -1,4 +1,5 @@
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { ITrip } from './ITrip';
 
 export interface IDriverLocation {
   lat: number;
@@ -15,4 +16,5 @@ export interface IDriver extends Document {
     type: 'Point';
     coordinates: [number, number]; // [lng, lat]
   };
+  runningTrip?: Types.ObjectId | null;
 }
