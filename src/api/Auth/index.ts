@@ -48,9 +48,9 @@ router.post('/password-reset/request', passwordResetRequestHandler);
 router.post('/password-reset/validate', passwordResetValidateHandler);
 router.post('/password-reset/complete', passwordResetCompleteHandler);
 
-// router.post('/login', (req, res, next) =>
-//   loginHandler(req, res, next, passport),
-// );
+router.post('/login', (req, res, next) =>
+  loginHandler(req, res, next, passport),
+);
 router.post('/login/dash', (req, res, next) =>
   loginDashHandler(req, res, next, passport),
 );
