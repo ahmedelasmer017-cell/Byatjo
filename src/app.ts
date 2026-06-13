@@ -271,6 +271,8 @@ if (isProd) {
 const defaultAllowedOrigins = [
   'https://byatjo.shop',
   'https://www.byatjo.shop',
+  'https://byatjo-dashboard.vercel.app',
+  '*',
 ];
 // Include FRONTEND_URL (commonly set on Vercel) and any ALLOWED_ORIGINS env var
 // in a forgiving way (commas, trailing slashes ignored).
