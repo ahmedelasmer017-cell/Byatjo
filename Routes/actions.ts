@@ -474,6 +474,7 @@ router.get(
 
       if (req.query.search) {
         const q = new RegExp(req.query.search as string, 'i');
+
         filter.$or = [
           { 'pickup.address': q },
           { 'dropoff.address': q },
@@ -481,6 +482,22 @@ router.get(
           { riderId: q },
           { driverId: q },
         ];
+      }
+
+      // Filter by createdAt
+      const fromDate = req.query.fromDate as string | undefined;
+      const toDate = req.query.toDate as string | undefined;
+
+      if (fromDate || toDate) {
+        filter.createdAt = {};
+
+        if (fromDate) {
+          filter.createdAt.$gte = new Date(`${fromDate}T00:00:00.000Z`);
+        }
+
+        if (toDate) {
+          filter.createdAt.$lte = new Date(`${toDate}T23:59:59.999Z`);
+        }
       }
 
       const [trips, totalTrips] = await Promise.all([
@@ -1032,18 +1049,11 @@ router.get(
 );
 router.get(
   '/trips/rider/:riderId',
-  // '/trips/rider/nopage/:riderId',
   optionalAuthenticateJWT(passport),
   async (req: Request, res: Response) => {
     try {
       const { riderId } = req.params;
 
-      // Validate userId
-      // if (!mongoose.Types.ObjectId.isValid(riderId)) {
-      //   return res.status(400).json({ error: 'Invalid userId' });
-      // }
-
-      // Extract pagination parameters from query
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const skip = (page - 1) * limit;
@@ -1054,14 +1064,29 @@ router.get(
           .json({ error: 'page and limit must be positive integers' });
       }
 
-      // Count total trips for this user
-      const totalTrips = await Trip.countDocuments({ riderId });
+      const filter: Record<string, any> = {
+        riderId,
+      };
 
-      // Fetch paginated trips for this user
-      const trips = await Trip.find({ riderId })
-        .skip(skip)
-        .limit(limit)
-        .sort({ tripTime: -1 }); // Most recent first
+      const fromDate = req.query.fromDate as string | undefined;
+      const toDate = req.query.toDate as string | undefined;
+
+      if (fromDate || toDate) {
+        filter.createdAt = {};
+
+        if (fromDate) {
+          filter.createdAt.$gte = new Date(`${fromDate}T00:00:00.000Z`);
+        }
+
+        if (toDate) {
+          filter.createdAt.$lte = new Date(`${toDate}T23:59:59.999Z`);
+        }
+      }
+
+      const [totalTrips, trips] = await Promise.all([
+        Trip.countDocuments(filter),
+        Trip.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
+      ]);
 
       return res.status(200).json({
         success: true,
@@ -1073,8 +1098,8 @@ router.get(
         hasMore: page * limit < totalTrips,
       });
     } catch (err) {
-      console.error('Error in /trips/user/:riderId', err);
-      return res.status(500).json({ error: 'Error in /trips/user/:riderId' });
+      console.error('Error in /trips/rider/:riderId', err);
+      return res.status(500).json({ error: 'Error in /trips/rider/:riderId' });
     }
   },
 );
@@ -1091,12 +1116,6 @@ router.get(
     try {
       const { driverId } = req.params;
 
-      // Validate driverId
-      // if (!mongoose.Types.ObjectId.isValid(driverId)) {
-      //   return res.status(400).json({ error: 'Invalid driverId' });
-      // }
-
-      // Extract pagination parameters from query
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const skip = (page - 1) * limit;
@@ -1107,14 +1126,29 @@ router.get(
           .json({ error: 'page and limit must be positive integers' });
       }
 
-      // Count total trips for this user
-      const totalTrips = await Trip.countDocuments({ driverId });
+      const filter: Record<string, any> = {
+        driverId,
+      };
 
-      // Fetch paginated trips for this user
-      const trips = await Trip.find({ driverId })
-        .skip(skip)
-        .limit(limit)
-        .sort({ tripTime: -1 }); // Most recent first
+      const fromDate = req.query.fromDate as string | undefined;
+      const toDate = req.query.toDate as string | undefined;
+
+      if (fromDate || toDate) {
+        filter.createdAt = {};
+
+        if (fromDate) {
+          filter.createdAt.$gte = new Date(`${fromDate}T00:00:00.000Z`);
+        }
+
+        if (toDate) {
+          filter.createdAt.$lte = new Date(`${toDate}T23:59:59.999Z`);
+        }
+      }
+
+      const [totalTrips, trips] = await Promise.all([
+        Trip.countDocuments(filter),
+        Trip.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
+      ]);
 
       return res.status(200).json({
         success: true,
@@ -1126,8 +1160,10 @@ router.get(
         hasMore: page * limit < totalTrips,
       });
     } catch (err) {
-      console.error('Error in /trips/user/:driverId', err);
-      return res.status(500).json({ error: 'Error in /trips/user/:driverId' });
+      console.error('Error in /trips/driver/:driverId', err);
+      return res
+        .status(500)
+        .json({ error: 'Error in /trips/driver/:driverId' });
     }
   },
 );
